@@ -24,9 +24,10 @@ Faker.seed(42)
 
 
 def weighted_choice(distribution: dict) -> str:
-    """Select from distribution based on weights"""
+    """Select from distribution based on weights (auto-normalizes)"""
     items = list(distribution.keys())
-    weights = list(distribution.values())
+    weights = np.array(list(distribution.values()), dtype=float)
+    weights = weights / weights.sum()  # Normalize to ensure sum = 1
     return np.random.choice(items, p=weights)
 
 
