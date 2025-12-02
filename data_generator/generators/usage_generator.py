@@ -65,11 +65,11 @@ def generate_monthly_usage(customers_df: pd.DataFrame, months: int = 12) -> pd.D
             
             # 5G percentage (higher for newer customers with 5G devices)
             if cust.get('is_5g_capable', False):
-                data_5g_pct = round(min(np.random.normal(40, 20), 80), 2)
+                data_5g_pct = round(max(0, min(np.random.normal(40, 15), 80)), 2)
                 data_4g_pct = round(100 - data_5g_pct, 2)
             else:
-                data_5g_pct = 0
-                data_4g_pct = 100
+                data_5g_pct = 0.0
+                data_4g_pct = 100.0
             
             # Throttled days (only for limited plans)
             plan_limit = DATA_USAGE_BY_PLAN[plan_name].get("max", 999)

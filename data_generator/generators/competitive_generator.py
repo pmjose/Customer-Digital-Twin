@@ -13,15 +13,15 @@ sys.path.append('..')
 from config import CARRIER_MARKET_SHARE, CARRIER_AVG_PRICE
 
 
-# Top 210 DMAs (simplified list)
+# Top 210 DMAs (comprehensive list aligned with zip_demographics)
 DMA_DATA = [
     ("501", "New York, NY", 7500000),
     ("803", "Los Angeles, CA", 5800000),
     ("602", "Chicago, IL", 3500000),
     ("504", "Philadelphia, PA", 2900000),
     ("807", "San Francisco-Oakland-San Jose, CA", 2700000),
-    ("511", "Washington, DC (Hagerstown, MD)", 2500000),
-    ("506", "Boston, MA (Manchester, NH)", 2400000),
+    ("511", "Washington, DC", 2500000),
+    ("506", "Boston, MA", 2400000),
     ("623", "Dallas-Ft. Worth, TX", 2800000),
     ("524", "Atlanta, GA", 2600000),
     ("618", "Houston, TX", 2500000),
@@ -39,21 +39,70 @@ DMA_DATA = [
     ("560", "Raleigh-Durham, NC", 1200000),
     ("617", "Milwaukee, WI", 900000),
     ("515", "Cincinnati, OH", 900000),
-    ("548", "West Palm Beach-Ft. Pierce, FL", 800000),
+    ("548", "West Palm Beach, FL", 800000),
     ("508", "Pittsburgh, PA", 1100000),
     ("640", "Memphis, TN", 700000),
-    ("534", "Orlando-Daytona Beach, FL", 1400000),
+    ("534", "Orlando, FL", 1400000),
     ("641", "San Antonio, TX", 1000000),
     ("512", "Baltimore, MD", 1100000),
-    # Add more DMAs to reach 210
+    ("659", "Nashville, TN", 1000000),
+    ("561", "Jacksonville, FL", 800000),
+    ("820", "Portland, OR", 900000),
+    ("517", "Charlotte, NC", 1100000),
+    ("544", "Norfolk, VA", 700000),
+    ("533", "Hartford, CT", 700000),
+    ("521", "Providence, RI", 600000),
+    ("563", "Grand Rapids, MI", 500000),
+    ("686", "Mobile, AL", 400000),
+    ("546", "Columbia, SC", 500000),
+    ("525", "Columbus, OH", 900000),
+    ("532", "Albany, NY", 500000),
+    ("577", "Scranton, PA", 400000),
+    ("566", "Harrisburg, PA", 500000),
+    ("557", "Knoxville, TN", 500000),
+    ("693", "Little Rock, AR", 450000),
+    ("541", "Lexington, KY", 400000),
+    ("630", "Birmingham, AL", 600000),
+    ("691", "Huntsville, AL", 400000),
+    ("518", "Greensboro, NC", 600000),
+    ("545", "Greenville, SC", 600000),
+    ("542", "Dayton, OH", 500000),
+    ("564", "Charleston, WV", 350000),
+    ("540", "Louisville, KY", 700000),
+    ("881", "Spokane, WA", 400000),
+    ("813", "Medford, OR", 200000),
+    ("622", "New Orleans, LA", 700000),
+    ("650", "Oklahoma City, OK", 700000),
+    ("770", "Salt Lake City, UT", 900000),
+    ("679", "Des Moines, IA", 450000),
+    ("839", "Las Vegas, NV", 900000),
+    ("718", "Jackson, MS", 350000),
+    ("678", "Wichita, KS", 350000),
+    ("790", "Albuquerque, NM", 500000),
+    ("652", "Omaha, NE", 500000),
+    ("757", "Boise, ID", 400000),
+    ("744", "Honolulu, HI", 600000),
+    ("762", "Missoula, MT", 150000),
+    ("725", "Sioux Falls, SD", 250000),
+    ("724", "Fargo, ND", 200000),
+    ("743", "Anchorage, AK", 200000),
+    ("523", "Burlington, VT", 150000),
+    ("767", "Casper, WY", 100000),
+    ("500", "Portland, ME", 350000),
+    # Additional markets for coverage
 ]
 
-# Generate remaining DMAs programmatically
-for i in range(len(DMA_DATA), 210):
-    dma_code = str(500 + i)
-    dma_name = f"Market {i+1}"
-    pop = int(np.random.uniform(100000, 800000))
-    DMA_DATA.append((dma_code, dma_name, pop))
+# Generate remaining DMAs programmatically with unique codes
+existing_codes = {d[0] for d in DMA_DATA}
+next_code = 700  # Start from 700 to avoid conflicts
+while len(DMA_DATA) < 210:
+    code = str(next_code)
+    if code not in existing_codes:
+        dma_name = f"Market {code}"
+        pop = int(np.random.uniform(100000, 800000))
+        DMA_DATA.append((code, dma_name, pop))
+        existing_codes.add(code)
+    next_code += 1
 
 
 COMPETITOR_PROMOS = [
@@ -88,7 +137,7 @@ def generate_competitive_landscape(n_dmas: int = 210) -> pd.DataFrame:
         # Market share with variation
         vz_share = round(max(15, min(40, CARRIER_MARKET_SHARE["Verizon"]["mean"] + np.random.normal(0, 5))), 2)
         att_share = round(max(15, min(35, CARRIER_MARKET_SHARE["AT&T"]["mean"] + np.random.normal(0, 5))), 2)
-        tmo_share = round(max(15, min(35, CARRIER_MARKET_SHARE["T-Mobile"]["mean"] + np.random.normal(0, 6))), 2)
+        tmo_share = round(max(15, min(35, CARRIER_MARKET_SHARE["T-Mobile"]["mean"] + np.random.normal(0, 4))), 2)
         
         # Snowmobile share varies by market
         # Stronger in West/Mountain, weaker in some East Coast markets
