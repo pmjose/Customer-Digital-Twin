@@ -1,0 +1,17 @@
+# This directory holds generated CSV data files
+# Run data_generator/generate_all_data.py to create the data files
+
+# Expected structure after generation:
+# data/
+# ├── internal/
+# │   ├── customers.csv
+# │   ├── monthly_usage.csv
+# │   ├── support_interactions.csv
+# │   └── campaign_responses.csv
+# └── external/
+#     ├── zip_demographics.csv
+#     ├── economic_indicators.csv
+#     ├── competitive_landscape.csv
+#     └── lifestyle_segments.csv
+
+

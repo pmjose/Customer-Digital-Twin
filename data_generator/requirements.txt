@@ -1,0 +1,20 @@
+# Snowmobile Wireless - Customer Digital Twin
+# Data Generator Requirements
+
+# Core data generation
+faker==22.0.0
+pandas==2.1.4
+numpy==1.26.2
+
+# Progress bars and utilities
+tqdm==4.66.1
+
+# Date handling
+python-dateutil==2.8.2
+
+# UUID generation (built into Python, but listed for clarity)
+# uuid - standard library
+
+# Optional: For running in Snowflake Notebooks
+# snowflake-snowpark-python==1.11.1
+

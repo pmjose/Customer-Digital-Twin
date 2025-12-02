@@ -1,0 +1,262 @@
+-- ============================================================================
+-- Snowmobile Wireless - Customer Digital Twin
+-- 01_setup_database.sql
+-- 
+-- Purpose: Create database, schemas, warehouses, and roles
+-- ============================================================================
+
+-- Use ACCOUNTADMIN to create infrastructure
+USE ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- DATABASE
+-- ============================================================================
+
+CREATE DATABASE IF NOT EXISTS SNOWMOBILE_DIGITAL_TWIN
+    COMMENT = 'Snowmobile Wireless Customer Digital Twin - AI-powered persona agents for marketing simulation';
+
+USE DATABASE SNOWMOBILE_DIGITAL_TWIN;
+
+-- ============================================================================
+-- SCHEMAS
+-- ============================================================================
+
+-- Internal/1st party data
+CREATE SCHEMA IF NOT EXISTS RAW
+    COMMENT = 'Raw internal customer data (customers, usage, interactions, campaigns)';
+
+-- External/3rd party data
+CREATE SCHEMA IF NOT EXISTS EXTERNAL
+    COMMENT = 'External enrichment data (demographics, economic, competitive, lifestyle)';
+
+-- Analytics and ML outputs
+CREATE SCHEMA IF NOT EXISTS ANALYTICS
+    COMMENT = 'Derived analytics, feature engineering, and ML outputs';
+
+-- Persona definitions and context
+CREATE SCHEMA IF NOT EXISTS PERSONAS
+    COMMENT = 'AI-generated persona definitions and historical context';
+
+-- Agent functions and simulation logs
+CREATE SCHEMA IF NOT EXISTS AGENTS
+    COMMENT = 'Agent functions, procedures, and simulation logs';
+
+-- Application objects
+CREATE SCHEMA IF NOT EXISTS APP
+    COMMENT = 'Streamlit application and related objects';
+
+-- ============================================================================
+-- WAREHOUSES
+-- ============================================================================
+
+-- Data loading warehouse
+CREATE WAREHOUSE IF NOT EXISTS CDT_LOAD_WH
+    WAREHOUSE_SIZE = 'MEDIUM'
+    AUTO_SUSPEND = 300
+    AUTO_RESUME = TRUE
+    INITIALLY_SUSPENDED = TRUE
+    COMMENT = 'Warehouse for data loading and ETL operations';
+
+-- ML/Clustering warehouse
+CREATE WAREHOUSE IF NOT EXISTS CDT_ML_WH
+    WAREHOUSE_SIZE = 'LARGE'
+    AUTO_SUSPEND = 300
+    AUTO_RESUME = TRUE
+    INITIALLY_SUSPENDED = TRUE
+    COMMENT = 'Warehouse for ML operations (clustering, feature engineering)';
+
+-- Cortex AI warehouse
+CREATE WAREHOUSE IF NOT EXISTS CDT_CORTEX_WH
+    WAREHOUSE_SIZE = 'MEDIUM'
+    AUTO_SUSPEND = 300
+    AUTO_RESUME = TRUE
+    INITIALLY_SUSPENDED = TRUE
+    COMMENT = 'Warehouse for Cortex AI operations (LLM calls, embeddings)';
+
+-- Streamlit app warehouse
+CREATE WAREHOUSE IF NOT EXISTS CDT_APP_WH
+    WAREHOUSE_SIZE = 'X-SMALL'
+    AUTO_SUSPEND = 60
+    AUTO_RESUME = TRUE
+    INITIALLY_SUSPENDED = TRUE
+    COMMENT = 'Warehouse for Streamlit application';
+
+-- ============================================================================
+-- ROLES
+-- ============================================================================
+
+-- Admin role - full access
+CREATE ROLE IF NOT EXISTS CDT_ADMIN
+    COMMENT = 'Full administrative access to Customer Digital Twin';
+
+-- Developer role - create/modify objects
+CREATE ROLE IF NOT EXISTS CDT_DEVELOPER
+    COMMENT = 'Developer access - create and modify objects';
+
+-- Analyst role - read and run simulations
+CREATE ROLE IF NOT EXISTS CDT_ANALYST
+    COMMENT = 'Analyst access - read data and run simulations';
+
+-- Viewer role - read-only
+CREATE ROLE IF NOT EXISTS CDT_VIEWER
+    COMMENT = 'Viewer access - read-only';
+
+-- Data loader role - load data
+CREATE ROLE IF NOT EXISTS CDT_DATA_LOADER
+    COMMENT = 'Data loader access - load data to RAW and EXTERNAL schemas';
+
+-- App service role
+CREATE ROLE IF NOT EXISTS CDT_APP_ROLE
+    COMMENT = 'Streamlit application service role';
+
+-- ============================================================================
+-- ROLE HIERARCHY
+-- ============================================================================
+
+-- Set up role hierarchy
+GRANT ROLE CDT_VIEWER TO ROLE CDT_ANALYST;
+GRANT ROLE CDT_ANALYST TO ROLE CDT_DEVELOPER;
+GRANT ROLE CDT_DEVELOPER TO ROLE CDT_ADMIN;
+GRANT ROLE CDT_DATA_LOADER TO ROLE CDT_ADMIN;
+GRANT ROLE CDT_APP_ROLE TO ROLE CDT_ADMIN;
+GRANT ROLE CDT_ADMIN TO ROLE ACCOUNTADMIN;
+
+-- ============================================================================
+-- DATABASE GRANTS
+-- ============================================================================
+
+-- CDT_ADMIN gets ownership
+GRANT OWNERSHIP ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_ADMIN COPY CURRENT GRANTS;
+GRANT OWNERSHIP ON ALL SCHEMAS IN DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_ADMIN COPY CURRENT GRANTS;
+
+-- Usage grants
+GRANT USAGE ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_ANALYST;
+GRANT USAGE ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_VIEWER;
+GRANT USAGE ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_DATA_LOADER;
+GRANT USAGE ON DATABASE SNOWMOBILE_DIGITAL_TWIN TO ROLE CDT_APP_ROLE;
+
+-- ============================================================================
+-- SCHEMA GRANTS
+-- ============================================================================
+
+-- RAW schema
+GRANT ALL ON SCHEMA RAW TO ROLE CDT_ADMIN;
+GRANT CREATE TABLE, CREATE VIEW ON SCHEMA RAW TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA RAW TO ROLE CDT_ANALYST;
+GRANT USAGE ON SCHEMA RAW TO ROLE CDT_VIEWER;
+GRANT USAGE, CREATE TABLE ON SCHEMA RAW TO ROLE CDT_DATA_LOADER;
+GRANT USAGE ON SCHEMA RAW TO ROLE CDT_APP_ROLE;
+
+-- EXTERNAL schema
+GRANT ALL ON SCHEMA EXTERNAL TO ROLE CDT_ADMIN;
+GRANT CREATE TABLE, CREATE VIEW ON SCHEMA EXTERNAL TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA EXTERNAL TO ROLE CDT_ANALYST;
+GRANT USAGE ON SCHEMA EXTERNAL TO ROLE CDT_VIEWER;
+GRANT USAGE, CREATE TABLE ON SCHEMA EXTERNAL TO ROLE CDT_DATA_LOADER;
+GRANT USAGE ON SCHEMA EXTERNAL TO ROLE CDT_APP_ROLE;
+
+-- ANALYTICS schema
+GRANT ALL ON SCHEMA ANALYTICS TO ROLE CDT_ADMIN;
+GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION ON SCHEMA ANALYTICS TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA ANALYTICS TO ROLE CDT_ANALYST;
+GRANT USAGE ON SCHEMA ANALYTICS TO ROLE CDT_VIEWER;
+GRANT USAGE ON SCHEMA ANALYTICS TO ROLE CDT_APP_ROLE;
+
+-- PERSONAS schema
+GRANT ALL ON SCHEMA PERSONAS TO ROLE CDT_ADMIN;
+GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION ON SCHEMA PERSONAS TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA PERSONAS TO ROLE CDT_ANALYST;
+GRANT USAGE ON SCHEMA PERSONAS TO ROLE CDT_VIEWER;
+GRANT USAGE ON SCHEMA PERSONAS TO ROLE CDT_APP_ROLE;
+
+-- AGENTS schema
+GRANT ALL ON SCHEMA AGENTS TO ROLE CDT_ADMIN;
+GRANT CREATE TABLE, CREATE VIEW, CREATE FUNCTION, CREATE PROCEDURE ON SCHEMA AGENTS TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA AGENTS TO ROLE CDT_ANALYST;
+GRANT USAGE ON SCHEMA AGENTS TO ROLE CDT_APP_ROLE;
+
+-- APP schema
+GRANT ALL ON SCHEMA APP TO ROLE CDT_ADMIN;
+GRANT CREATE STREAMLIT ON SCHEMA APP TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON SCHEMA APP TO ROLE CDT_APP_ROLE;
+
+-- ============================================================================
+-- WAREHOUSE GRANTS
+-- ============================================================================
+
+GRANT USAGE ON WAREHOUSE CDT_LOAD_WH TO ROLE CDT_ADMIN;
+GRANT USAGE ON WAREHOUSE CDT_LOAD_WH TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON WAREHOUSE CDT_LOAD_WH TO ROLE CDT_DATA_LOADER;
+
+GRANT USAGE ON WAREHOUSE CDT_ML_WH TO ROLE CDT_ADMIN;
+GRANT USAGE ON WAREHOUSE CDT_ML_WH TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON WAREHOUSE CDT_ML_WH TO ROLE CDT_ANALYST;
+
+GRANT USAGE ON WAREHOUSE CDT_CORTEX_WH TO ROLE CDT_ADMIN;
+GRANT USAGE ON WAREHOUSE CDT_CORTEX_WH TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON WAREHOUSE CDT_CORTEX_WH TO ROLE CDT_ANALYST;
+GRANT USAGE ON WAREHOUSE CDT_CORTEX_WH TO ROLE CDT_APP_ROLE;
+
+GRANT USAGE ON WAREHOUSE CDT_APP_WH TO ROLE CDT_ADMIN;
+GRANT USAGE ON WAREHOUSE CDT_APP_WH TO ROLE CDT_DEVELOPER;
+GRANT USAGE ON WAREHOUSE CDT_APP_WH TO ROLE CDT_APP_ROLE;
+
+-- ============================================================================
+-- FUTURE GRANTS (for objects created later)
+-- ============================================================================
+
+-- Future grants on tables
+GRANT SELECT ON FUTURE TABLES IN SCHEMA RAW TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA RAW TO ROLE CDT_VIEWER;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA RAW TO ROLE CDT_APP_ROLE;
+
+GRANT SELECT ON FUTURE TABLES IN SCHEMA EXTERNAL TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA EXTERNAL TO ROLE CDT_VIEWER;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA EXTERNAL TO ROLE CDT_APP_ROLE;
+
+GRANT SELECT ON FUTURE TABLES IN SCHEMA ANALYTICS TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA ANALYTICS TO ROLE CDT_VIEWER;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA ANALYTICS TO ROLE CDT_APP_ROLE;
+
+GRANT SELECT ON FUTURE TABLES IN SCHEMA PERSONAS TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA PERSONAS TO ROLE CDT_VIEWER;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA PERSONAS TO ROLE CDT_APP_ROLE;
+
+GRANT SELECT ON FUTURE TABLES IN SCHEMA AGENTS TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE TABLES IN SCHEMA AGENTS TO ROLE CDT_APP_ROLE;
+
+-- Future grants on views
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA ANALYTICS TO ROLE CDT_ANALYST;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA ANALYTICS TO ROLE CDT_VIEWER;
+GRANT SELECT ON FUTURE VIEWS IN SCHEMA ANALYTICS TO ROLE CDT_APP_ROLE;
+
+-- Future grants on functions
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA PERSONAS TO ROLE CDT_ANALYST;
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA PERSONAS TO ROLE CDT_APP_ROLE;
+
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA AGENTS TO ROLE CDT_ANALYST;
+GRANT USAGE ON FUTURE FUNCTIONS IN SCHEMA AGENTS TO ROLE CDT_APP_ROLE;
+
+-- Future grants on procedures
+GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA AGENTS TO ROLE CDT_ANALYST;
+GRANT USAGE ON FUTURE PROCEDURES IN SCHEMA AGENTS TO ROLE CDT_APP_ROLE;
+
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+
+-- Verify setup
+SHOW DATABASES LIKE 'SNOWMOBILE_DIGITAL_TWIN';
+SHOW SCHEMAS IN DATABASE SNOWMOBILE_DIGITAL_TWIN;
+SHOW WAREHOUSES LIKE 'CDT%';
+SHOW ROLES LIKE 'CDT%';
+
+-- Set default context for next scripts
+USE DATABASE SNOWMOBILE_DIGITAL_TWIN;
+USE SCHEMA RAW;
+USE WAREHOUSE CDT_LOAD_WH;
+
+SELECT 'Database setup complete!' AS status;
+
+
