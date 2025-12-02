@@ -12,9 +12,9 @@ USE WAREHOUSE CDT_LOAD_WH;
 -- PRE-LOAD CHECKS
 -- ============================================================================
 
--- Verify files are staged
--- LIST @RAW.DATA_STAGE/internal/;
--- LIST @RAW.DATA_STAGE/external/;
+-- Verify files are available in S3 stage
+LIST @RAW.S3_DATA_STAGE/internal/;
+LIST @RAW.S3_DATA_STAGE/external/;
 
 -- ============================================================================
 -- LOAD INTERNAL DATA
@@ -35,10 +35,9 @@ COPY INTO RAW.CUSTOMERS (
     app_user, app_engagement_score, last_app_login, nps_score, nps_survey_date,
     churn_risk_score, predicted_churn_reason, complaint_count_12m
 )
-FROM @RAW.DATA_STAGE/internal/customers/
+FROM @RAW.S3_DATA_STAGE/internal/customers.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 -- Log results
 SELECT 'CUSTOMERS' AS table_name, COUNT(*) AS records_loaded FROM RAW.CUSTOMERS;
@@ -56,10 +55,9 @@ COPY INTO RAW.MONTHLY_USAGE (
     base_charge, overage_charges, roaming_charges, add_on_charges, discounts_applied, total_bill,
     payment_status, days_to_payment
 )
-FROM @RAW.DATA_STAGE/internal/monthly_usage/
+FROM @RAW.S3_DATA_STAGE/internal/monthly_usage.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'MONTHLY_USAGE' AS table_name, COUNT(*) AS records_loaded FROM RAW.MONTHLY_USAGE;
 
@@ -74,10 +72,9 @@ COPY INTO RAW.SUPPORT_INTERACTIONS (
     sentiment_score, csat_score,
     interaction_summary, customer_verbatim
 )
-FROM @RAW.DATA_STAGE/internal/support_interactions/
+FROM @RAW.S3_DATA_STAGE/internal/support_interactions.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'SUPPORT_INTERACTIONS' AS table_name, COUNT(*) AS records_loaded FROM RAW.SUPPORT_INTERACTIONS;
 
@@ -92,10 +89,9 @@ COPY INTO RAW.CAMPAIGN_RESPONSES (
     opened, clicked, responded, response_type, response_at,
     converted, conversion_value
 )
-FROM @RAW.DATA_STAGE/internal/campaign_responses/
+FROM @RAW.S3_DATA_STAGE/internal/campaign_responses.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'CAMPAIGN_RESPONSES' AS table_name, COUNT(*) AS records_loaded FROM RAW.CAMPAIGN_RESPONSES;
 
@@ -119,10 +115,9 @@ COPY INTO EXTERNAL.ZIP_DEMOGRAPHICS (
     labor_force_participation, pct_white_collar, pct_blue_collar, pct_service_industry,
     pct_white, pct_black, pct_hispanic, pct_asian, pct_other_race
 )
-FROM @RAW.DATA_STAGE/external/zip_demographics/
+FROM @RAW.S3_DATA_STAGE/external/zip_demographics.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'ZIP_DEMOGRAPHICS' AS table_name, COUNT(*) AS records_loaded FROM EXTERNAL.ZIP_DEMOGRAPHICS;
 
@@ -140,10 +135,9 @@ COPY INTO EXTERNAL.ECONOMIC_INDICATORS (
     retail_sales_per_capita, ecommerce_penetration,
     data_as_of_date
 )
-FROM @RAW.DATA_STAGE/external/economic_indicators/
+FROM @RAW.S3_DATA_STAGE/external/economic_indicators.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'ECONOMIC_INDICATORS' AS table_name, COUNT(*) AS records_loaded FROM EXTERNAL.ECONOMIC_INDICATORS;
 
@@ -161,10 +155,9 @@ COPY INTO EXTERNAL.COMPETITIVE_LANDSCAPE (
     regional_market_share, regional_avg_price,
     market_concentration, price_war_intensity, recent_competitor_promo, promo_end_date
 )
-FROM @RAW.DATA_STAGE/external/competitive_landscape/
+FROM @RAW.S3_DATA_STAGE/external/competitive_landscape.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'COMPETITIVE_LANDSCAPE' AS table_name, COUNT(*) AS records_loaded FROM EXTERNAL.COMPETITIVE_LANDSCAPE;
 
@@ -183,10 +176,9 @@ COPY INTO EXTERNAL.LIFESTYLE_SEGMENTS (
     avg_data_usage_gb, avg_lines_per_account, family_plan_propensity, premium_plan_propensity, prepaid_propensity,
     deal_seeker_index, switching_propensity, competitor_awareness
 )
-FROM @RAW.DATA_STAGE/external/lifestyle_segments/
+FROM @RAW.S3_DATA_STAGE/external/lifestyle_segments.csv
 FILE_FORMAT = (FORMAT_NAME = 'RAW.CSV_FORMAT')
-ON_ERROR = 'CONTINUE'
-PURGE = FALSE;
+ON_ERROR = 'CONTINUE';
 
 SELECT 'LIFESTYLE_SEGMENTS' AS table_name, COUNT(*) AS records_loaded FROM EXTERNAL.LIFESTYLE_SEGMENTS;
 

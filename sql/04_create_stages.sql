@@ -39,57 +39,89 @@ CREATE OR REPLACE FILE FORMAT RAW.CSV_PIPE_FORMAT
     COMMENT = 'Pipe-delimited CSV format';
 
 -- ============================================================================
--- INTERNAL STAGES
+-- EXTERNAL S3 STAGE
 -- ============================================================================
 
--- Main data stage for all CSV files
+-- External stage pointing to public S3 bucket with CSV data
+-- Data location: s3://pjose-public/Customer-Digital-Twin/data/
+-- Structure:
+--   s3://pjose-public/Customer-Digital-Twin/data/internal/customers.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/internal/monthly_usage.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/internal/support_interactions.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/internal/campaign_responses.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/external/zip_demographics.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/external/economic_indicators.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/external/competitive_landscape.csv
+--   s3://pjose-public/Customer-Digital-Twin/data/external/lifestyle_segments.csv
+
+CREATE OR REPLACE STAGE RAW.S3_DATA_STAGE
+    URL = 's3://pjose-public/Customer-Digital-Twin/data/'
+    FILE_FORMAT = RAW.CSV_FORMAT
+    DIRECTORY = (ENABLE = TRUE)
+    COMMENT = 'External S3 stage for Customer Digital Twin data';
+
+-- Alternative: Internal stage (if you prefer to upload files manually)
 CREATE OR REPLACE STAGE RAW.DATA_STAGE
     FILE_FORMAT = RAW.CSV_FORMAT
     DIRECTORY = (ENABLE = TRUE)
-    COMMENT = 'Stage for loading CSV data files';
-
--- Create subdirectories within stage (conceptual - actual paths created on upload)
--- Structure:
---   @RAW.DATA_STAGE/internal/customers/
---   @RAW.DATA_STAGE/internal/monthly_usage/
---   @RAW.DATA_STAGE/internal/support_interactions/
---   @RAW.DATA_STAGE/internal/campaign_responses/
---   @RAW.DATA_STAGE/external/zip_demographics/
---   @RAW.DATA_STAGE/external/economic_indicators/
---   @RAW.DATA_STAGE/external/competitive_landscape/
---   @RAW.DATA_STAGE/external/lifestyle_segments/
+    COMMENT = 'Internal stage for manual file uploads';
 
 -- ============================================================================
 -- GRANT STAGE ACCESS
 -- ============================================================================
 
+-- S3 external stage permissions
+GRANT READ ON STAGE RAW.S3_DATA_STAGE TO ROLE CDT_DATA_LOADER;
+GRANT READ ON STAGE RAW.S3_DATA_STAGE TO ROLE CDT_DEVELOPER;
+GRANT READ ON STAGE RAW.S3_DATA_STAGE TO ROLE CDT_ADMIN;
+
+-- Internal stage permissions (for manual uploads)
 GRANT READ, WRITE ON STAGE RAW.DATA_STAGE TO ROLE CDT_DATA_LOADER;
 GRANT READ ON STAGE RAW.DATA_STAGE TO ROLE CDT_DEVELOPER;
 GRANT READ ON STAGE RAW.DATA_STAGE TO ROLE CDT_ADMIN;
 
 -- ============================================================================
--- HELPER COMMANDS FOR UPLOADING FILES
+-- DATA LOCATION INFORMATION
 -- ============================================================================
 
 /*
 ================================================================================
-UPLOADING DATA FILES TO STAGE
+DATA IS ALREADY AVAILABLE IN S3
 ================================================================================
+
+The CSV data files are hosted in a public S3 bucket:
+  s3://pjose-public/Customer-Digital-Twin/data/
+
+Files available:
+  - internal/customers.csv          (1M records, ~256 MB)
+  - internal/monthly_usage.csv      (9.3M records, ~1.4 GB)
+  - internal/support_interactions.csv (2.1M records, ~613 MB)
+  - internal/campaign_responses.csv (5.3M records, ~1.1 GB)
+  - external/zip_demographics.csv   (42K records, ~11 MB)
+  - external/economic_indicators.csv (42K records, ~5 MB)
+  - external/competitive_landscape.csv (210 records, ~37 KB)
+  - external/lifestyle_segments.csv (42K records, ~8 MB)
+
+Total: ~17.8M records, ~3.4 GB
+
+To load data, run 05_load_data.sql which uses the S3_DATA_STAGE.
+
+================================================================================
+ALTERNATIVE: Manual Upload to Internal Stage
+================================================================================
+
+If you prefer to upload files manually instead of using S3:
 
 Option 1: Using SnowSQL CLI
 --------------------------
--- Internal data files
-PUT file://./data/internal/customers.csv @RAW.DATA_STAGE/internal/customers/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/internal/monthly_usage.csv @RAW.DATA_STAGE/internal/monthly_usage/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/internal/support_interactions.csv @RAW.DATA_STAGE/internal/support_interactions/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/internal/campaign_responses.csv @RAW.DATA_STAGE/internal/campaign_responses/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-
--- External data files
-PUT file://./data/external/zip_demographics.csv @RAW.DATA_STAGE/external/zip_demographics/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/external/economic_indicators.csv @RAW.DATA_STAGE/external/economic_indicators/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/external/competitive_landscape.csv @RAW.DATA_STAGE/external/competitive_landscape/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-PUT file://./data/external/lifestyle_segments.csv @RAW.DATA_STAGE/external/lifestyle_segments/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
-
+PUT file://./data/internal/customers.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/internal/monthly_usage.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/internal/support_interactions.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/internal/campaign_responses.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/external/zip_demographics.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/external/economic_indicators.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/external/competitive_landscape.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
+PUT file://./data/external/lifestyle_segments.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE OVERWRITE=TRUE;
 
 Option 2: Using Snowsight UI
 ---------------------------
@@ -97,14 +129,6 @@ Option 2: Using Snowsight UI
 2. Click on DATA_STAGE
 3. Click "+ Files" button
 4. Browse and select CSV files
-5. Optionally specify path prefix (e.g., internal/customers/)
-
-
-Option 3: Using Python Snowpark
--------------------------------
-from snowflake.snowpark import Session
-session = Session.builder.configs(connection_params).create()
-session.file.put('file://./data/internal/customers.csv', '@RAW.DATA_STAGE/internal/customers/', auto_compress=True, overwrite=True)
 
 ================================================================================
 */
@@ -113,17 +137,15 @@ session.file.put('file://./data/internal/customers.csv', '@RAW.DATA_STAGE/intern
 -- VERIFICATION QUERIES
 -- ============================================================================
 
--- List files in stage (run after uploading)
--- LIST @RAW.DATA_STAGE;
-
--- List files in specific path
--- LIST @RAW.DATA_STAGE/internal/customers/;
-
 -- Check file format
 SHOW FILE FORMATS IN SCHEMA RAW;
 
 -- Check stages
 SHOW STAGES IN SCHEMA RAW;
+
+-- List files in S3 stage
+LIST @RAW.S3_DATA_STAGE/internal/;
+LIST @RAW.S3_DATA_STAGE/external/;
 
 SELECT 'Stages and file formats created successfully!' AS status;
 
@@ -131,20 +153,16 @@ SELECT 'Stages and file formats created successfully!' AS status;
 -- SAMPLE DATA VALIDATION QUERIES
 -- ============================================================================
 
-/*
--- Preview data before loading (first 10 rows)
-SELECT $1, $2, $3, $4, $5
-FROM @RAW.DATA_STAGE/internal/customers/customers.csv.gz
+-- Preview customers data from S3 (first 5 rows)
+SELECT $1 AS customer_id, $2 AS account_id, $3 AS zip_code, $4 AS state_code, $5 AS dma_code
+FROM @RAW.S3_DATA_STAGE/internal/customers.csv
 (FILE_FORMAT => RAW.CSV_FORMAT)
-LIMIT 10;
+LIMIT 5;
 
--- Check row counts
-SELECT 
-    METADATA$FILENAME as filename,
-    COUNT(*) as row_count
-FROM @RAW.DATA_STAGE/internal/customers/
+-- Preview external data
+SELECT $1 AS zip_code, $2 AS zip_name, $3 AS state_code
+FROM @RAW.S3_DATA_STAGE/external/zip_demographics.csv
 (FILE_FORMAT => RAW.CSV_FORMAT)
-GROUP BY filename;
-*/
+LIMIT 5;
 
 

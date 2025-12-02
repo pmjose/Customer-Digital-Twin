@@ -130,7 +130,30 @@ Customer-Digital-Twin/
 - Python 3.8+ (for data generation)
 - ACCOUNTADMIN role or equivalent
 
-### Step 1: Generate Synthetic Data
+### Step 1: Set Up Snowflake
+
+```sql
+-- Run SQL scripts in order
+-- 01_setup_database.sql
+-- 02_create_internal_tables.sql
+-- 03_create_external_tables.sql
+-- 04_create_stages.sql
+```
+
+### Step 2: Load Data from S3
+
+**Data is pre-staged in a public S3 bucket!** No need to generate or upload data manually.
+
+```
+S3 Location: s3://pjose-public/Customer-Digital-Twin/data/
+```
+
+```sql
+-- Run 05_load_data.sql (loads from S3 automatically)
+-- This loads ~17.8M records from S3 into Snowflake tables
+```
+
+**Alternative: Generate Your Own Data**
 
 ```bash
 cd data_generator
@@ -143,45 +166,17 @@ python generate_all_data.py --customers 1000000 --seed 42
 python generate_all_data.py --customers 100000 --seed 42
 ```
 
-This generates ~17.8M records across 8 CSV files (~3.4 GB total).
-
-### Step 2: Set Up Snowflake
+### Step 3: Build Analytics Pipeline
 
 ```sql
--- Run SQL scripts in order
--- 01_setup_database.sql
--- 02_create_internal_tables.sql
--- 03_create_external_tables.sql
--- 04_create_stages.sql
+-- Run these in order:
+-- 06_create_enriched_views.sql   (Join internal + external data)
+-- 07_segmentation_pipeline.sql   (K-Means clustering)
+-- 08_persona_generation.sql      (Generate AI personas from segments)
+-- 09_agent_functions.sql         (Create persona interaction functions)
 ```
 
-### Step 3: Upload Data to Stage
-
-```bash
-# Using SnowSQL - Internal data
-snowsql -q "PUT file://./data/internal/customers.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/internal/monthly_usage.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/internal/support_interactions.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/internal/campaign_responses.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
-
-# Using SnowSQL - External data
-snowsql -q "PUT file://./data/external/zip_demographics.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/external/economic_indicators.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/external/competitive_landscape.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
-snowsql -q "PUT file://./data/external/lifestyle_segments.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
-```
-
-### Step 4: Load Data
-
-```sql
--- Run 05_load_data.sql
--- Then 06_create_enriched_views.sql
--- Then 07_segmentation_pipeline.sql
--- Then 08_persona_generation.sql
--- Then 09_agent_functions.sql
-```
-
-### Step 5: Deploy Streamlit App
+### Step 4: Deploy Streamlit App
 
 1. Go to Snowsight → Streamlit
 2. Create new app
@@ -229,9 +224,29 @@ CALL AGENTS.SIMULATE_SCENARIO(
 
 ## 📊 Data Architecture
 
-### Generated Data Files
+### ☁️ Pre-Staged Data in S3
 
-Run the data generator to create synthetic datasets:
+**Data is already available in a public S3 bucket - no generation needed!**
+
+```
+S3 Bucket: s3://pjose-public/Customer-Digital-Twin/data/
+├── internal/
+│   ├── customers.csv           (1M records, 256 MB)
+│   ├── monthly_usage.csv       (9.3M records, 1.4 GB)
+│   ├── support_interactions.csv (2.1M records, 613 MB)
+│   └── campaign_responses.csv   (5.3M records, 1.1 GB)
+└── external/
+    ├── zip_demographics.csv     (42K records, 11 MB)
+    ├── economic_indicators.csv  (42K records, 5 MB)
+    ├── competitive_landscape.csv (210 records, 37 KB)
+    └── lifestyle_segments.csv   (42K records, 8 MB)
+```
+
+The SQL scripts automatically create an external stage pointing to this S3 location.
+
+### Alternative: Generate Your Own Data
+
+If you want to generate fresh synthetic data:
 
 ```bash
 cd data_generator
