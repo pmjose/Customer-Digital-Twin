@@ -338,163 +338,75 @@ END;
 $$;
 
 -- ============================================================================
--- INSERT INITIAL PERSONAS (Manual for reliability)
+-- GENERATE PERSONAS FROM SEGMENTATION RESULTS
+-- ============================================================================
+-- 
+-- IMPORTANT: Personas are generated DYNAMICALLY from segment statistics.
+-- This follows the industry-standard flow:
+--   1. Run segmentation (07_segmentation_pipeline.sql)
+--   2. Generate personas from segment statistics (this section)
+--
+-- The GENERATE_ALL_PERSONAS() procedure reads from ANALYTICS.SEGMENT_STATISTICS
+-- which is created by the segmentation pipeline.
 -- ============================================================================
 
--- Clear existing personas
+-- Clear any existing personas before regenerating
 TRUNCATE TABLE PERSONAS.PERSONA_DEFINITIONS;
 
--- Insert pre-crafted personas based on segment profiles
-INSERT INTO PERSONAS.PERSONA_DEFINITIONS (
-    segment_id, segment_name, persona_name, persona_age, persona_location, persona_tagline,
-    typical_age_range, typical_gender_dist, typical_income_range, typical_household, typical_geography,
-    typical_plan, typical_contract, typical_tenure, typical_arpu, typical_device,
-    background_story, personality_description, relationship_with_service, financial_mindset,
-    communication_style, decision_making_style, emotional_triggers,
-    hot_buttons, sample_quotes
-)
-VALUES
--- S1: Value Seekers
-('S1', 'Value Seekers', 'Carlos Mendez', 34, 'Phoenix, AZ', 
- 'The budget-conscious deal hunter who refuses to pay a dollar more than necessary',
- '25-45', '52% M, 48% F', '$35,000-$55,000', 'Single or roommates, renting', 'Urban/Suburban',
- 'Glacier', 'No Contract', '8-14 months', 38.00, 'Samsung Galaxy A54',
- 'Carlos works as a warehouse supervisor in Phoenix and shares an apartment with a roommate. He switched to Snowmobile 10 months ago after seeing a prepaid promotion on Facebook. Before that, he bounced between Cricket and Metro depending on who had the best deal. He keeps a close eye on his budget and uses Google Sheets to track all his monthly expenses. His phone is essential for work communication and streaming music during his commute, but he refuses to pay for what he considers "premium features" he won''t use.',
- 'Carlos is practical, skeptical of marketing claims, and always looking for the catch in any offer. He values transparency and gets frustrated by hidden fees or complicated pricing. He''s not anti-technology but doesn''t feel the need to have the latest and greatest. He''ll do significant research before any purchase decision.',
- 'Mobile service is a utility to Carlos - necessary but shouldn''t be expensive. He uses his phone for calls, texts, music streaming, and occasional GPS navigation. He rarely uses more than 5GB of data because he''s careful to use WiFi whenever available. He checked the Snowmobile app once to see his usage but prefers to just set up autopay and forget about it unless there''s a problem.',
- 'Carlos sets strict limits on his phone bill - anything over $35/month feels like too much. He compares prices constantly and has a spreadsheet of competitor offers. When Snowmobile raised prices last year, he immediately called to complain and threatened to leave. He''s loyal only to whoever gives him the best deal.',
- 'Carlos prefers to handle everything through chat or the app - he hates waiting on hold. When frustrated, he''s direct and to the point. He''ll leave negative reviews if he feels wronged but will also give credit when deserved. His tone is matter-of-fact, not emotional.',
- 'Carlos researches extensively before making changes. He''ll spend hours comparing plans across carriers. He trusts online reviews and Reddit threads more than company marketing. Decisions can take weeks as he waits for better offers.',
- 'Price increases without value, hidden fees, feeling like he''s being taken advantage of, seeing competitors offer better deals',
- PARSE_JSON('{"happy": ["Getting a lower price than expected", "Clear and simple pricing", "Bill credits for issues"], "angry": ["Any price increase", "Hidden fees or surprise charges", "Slow customer service"], "ignores": ["5G marketing", "Premium features", "Device upgrade offers"]}'),
- PARSE_JSON('{"satisfied": "The price is right and I get what I need. No complaints.", "frustrated": "Why is my bill higher this month? I didn''t change anything. This is exactly why I left AT&T.", "considering_change": "Metro has a $25 plan now. What can you offer me to stay?"}')),
+-- Generate personas dynamically from segment statistics
+-- This procedure:
+--   1. Reads each segment from ANALYTICS.SEGMENT_STATISTICS
+--   2. Gathers historical verbatims for context
+--   3. Calls Snowflake Cortex LLM to generate realistic personas
+--   4. Inserts the generated personas into PERSONA_DEFINITIONS
+--
+-- NOTE: This requires ANALYTICS.SEGMENT_STATISTICS to exist.
+-- Run 07_segmentation_pipeline.sql first!
 
--- S2: Data Streamers
-('S2', 'Data Streamers', 'Jordan Chen', 28, 'Austin, TX',
- 'The content-obsessed streamer who treats unlimited data as a basic human right',
- '22-35', '55% M, 45% F', '$60,000-$90,000', 'Single, apartment dweller', 'Urban',
- 'Blizzard', '24 Month Device', '18-24 months', 72.00, 'iPhone 15 Pro',
- 'Jordan is a UX designer at a tech startup in Austin. They work hybrid but spend significant time at coffee shops and coworking spaces. They chose Snowmobile because a coworker recommended it for streaming quality on 5G. Jordan uses their phone constantly - for work Slack messages, streaming Spotify and podcasts, watching YouTube and TikTok, and video calls with friends. They went through 45GB last month without even trying. Their phone is essentially an extension of their personality.',
- 'Jordan is tech-forward, socially connected, and values experiences over things (except their phone). They''re early adopters who will try new features and apps immediately. They appreciate good design and get frustrated by clunky interfaces. They''re comfortable with digital everything and rarely step into physical stores.',
- 'Mobile connectivity is essential to Jordan''s identity and lifestyle. They chose the Blizzard unlimited plan specifically to never worry about data caps. The Snowmobile app is on their home screen and they check it occasionally to see their 5G usage stats. They genuinely enjoy having fast reliable data everywhere they go.',
- 'Jordan doesn''t mind paying $75/month because the service delivers. They view it as reasonable for unlimited everything. A price increase with added streaming benefits would be acceptable. They''d only leave if data performance degraded significantly or a competitor offered dramatically better value.',
- 'Jordan handles everything through the app and chat. They''ve never called customer service and hope to never need to. They''re concise in written communication and expect quick responses. If frustrated, they might post about it on social media.',
- 'Jordan makes decisions quickly based on tech reviews and friend recommendations. They trust brands that align with their values. Price is a factor but not the primary one - experience matters more.',
- 'Slow data speeds, being throttled, app crashes, outdated technology, falling behind competitors on features',
- PARSE_JSON('{"happy": ["Fast 5G everywhere", "Streaming bundles included", "Easy-to-use app"], "angry": ["Data throttling", "Network congestion", "Outdated app features"], "ignores": ["Voice minute counts", "Store promotions", "Traditional advertising"]}'),
- PARSE_JSON('{"satisfied": "5G speeds are actually incredible. Streaming never buffers. Worth every penny.", "frustrated": "Why am I getting throttled in downtown Austin? I pay for unlimited. This is not acceptable.", "considering_change": "Heard Verizon has better 5G coverage here. Might check them out if this keeps happening."}')),
-
--- S3: Family Connectors
-('S3', 'Family Connectors', 'Michelle Torres', 41, 'Gilbert, AZ',
- 'The family''s wireless lifeline who keeps everyone connected without breaking the bank',
- '35-50', '55% F, 45% M', '$85,000-$120,000', 'Married with children, homeowner', 'Suburban',
- 'Avalanche', '24 Month', '24-36 months', 125.00, 'iPhone 14/Samsung Galaxy S23',
- 'Michelle is a project manager at a healthcare company in the Phoenix suburbs. She''s married with three kids (15, 12, and 8) and manages all household technology and bills. She switched the family to Snowmobile two years ago for the Avalanche family plan after their previous carrier kept raising prices. She oversees four phone lines plus a tablet, constantly juggling her teenagers'' data usage while trying to keep the monthly bill predictable. Her husband travels for work and relies on good coverage.',
- 'Michelle is organized, practical, and protective of her family and budget. She''s the household CEO who researches purchases thoroughly but values time efficiency. She''s moderately tech-savvy - enough to troubleshoot basic issues but doesn''t want to spend hours on technical problems. She values reliability and hates surprises on her bill.',
- 'Michelle views wireless as essential household infrastructure. She monitors her kids'' usage through the app and has set up parental controls. The app is her primary interface with Snowmobile - she checks bills, adds data when needed, and manages family settings. She appreciates that she can handle most things without calling.',
- 'Michelle budgets $150/month for wireless and gets concerned if it exceeds $175. She evaluates price increases based on whether value is added - pure increases feel unfair. The total family value matters more than per-line cost. She''d consider leaving if a competitor offered significantly better family value.',
- 'Michelle prefers app and chat - they''re quick and documented. She avoids phone calls because they take too long. Her tone is direct and practical. When frustrated, she''s firm but not aggressive and will escalate if not resolved promptly.',
- 'Michelle evaluates offers based on total family impact. She''ll discuss major decisions with her husband but typically drives the final choice. She makes decisions within a week once she has the information she needs.',
- 'Surprise charges, coverage gaps during family travel, kids complaining about data limits, complicated family management',
- PARSE_JSON('{"happy": ["Family perks like Disney+", "Easy parental controls", "Bill credits for outages"], "angry": ["Unexpected bill increases", "Coverage problems on vacation", "Complicated family management"], "ignores": ["5G speed marketing", "Individual upgrade offers", "Technical jargon"]}'),
- PARSE_JSON('{"satisfied": "The family plan actually makes sense for us. Managing four lines through the app is pretty easy.", "frustrated": "Why did my bill jump $25 this month? I haven''t changed anything. This is exactly why we left Verizon.", "considering_change": "My neighbor says T-Mobile is $40 cheaper for families. Is there anything you can offer us?"}')),
-
--- S4: Steady Loyalists
-('S4', 'Steady Loyalists', 'Robert Patterson', 62, 'Columbus, OH',
- 'The long-term customer who values what works and isn''t looking for change',
- '50-70', '52% M, 48% F', '$55,000-$75,000', 'Empty nesters or married couple', 'Suburban/Rural',
- 'Powder', 'No Contract', '60+ months', 52.00, 'iPhone 12/Samsung Galaxy S21',
- 'Robert retired last year from a manufacturing company where he worked for 30 years. He''s been with Snowmobile (and its predecessor before the merger) for over 7 years. He and his wife Barbara have two lines on a simple plan. Robert uses his phone primarily for calls to family, occasional texts, and looking up information. He upgraded to a smartphone five years ago at his daughter''s insistence and has gotten comfortable with the basics.',
- 'Robert values reliability, simplicity, and doing business with companies he trusts. He''s not opposed to technology but doesn''t chase new features. He appreciates consistency and gets frustrated when things change unnecessarily. Once he finds something that works, he sticks with it.',
- 'Mobile service is a communication tool for Robert - important but not central to his identity. He calls his kids and grandkids, texts occasionally, and uses GPS when traveling. He''s learned to use the basics of his smartphone but prefers calling customer service over using apps. He appreciates that his phone just works.',
- 'Robert has paid roughly $50/month for years and considers it fair. Small price increases ($2-3) are acceptable if explained. He values the relationship and wouldn''t leave over minor issues. However, dramatic changes to his plan or service would shake his loyalty.',
- 'Robert prefers calling customer service - he likes talking to a real person. He''s polite but persistent if he has an issue. He visits the local store occasionally and appreciates face-to-face service. Email and app communication feel impersonal to him.',
- 'Robert deliberates on decisions and discusses with Barbara. He trusts personal recommendations over advertising. Major changes (like switching carriers) would take months of consideration. He values input from his adult children.',
- 'Forced changes to his plan, app redesigns that confuse him, feeling like a number instead of a valued customer, losing local store access',
- PARSE_JSON('{"happy": ["Recognition of loyalty", "Consistent reliable service", "Human customer service"], "angry": ["Forced plan changes", "Confusing new app interfaces", "Feeling undervalued"], "ignores": ["5G promotion", "New features marketing", "Social media campaigns"]}'),
- PARSE_JSON('{"satisfied": "Been with you folks for years and no major problems. That counts for something.", "frustrated": "Why did you change the app again? I finally learned how to use the old one. Just leave things alone.", "considering_change": "After all these years, I never thought I''d consider leaving. But if you keep making changes, maybe it''s time."}')),
-
--- S5: Premium Techies
-('S5', 'Premium Techies', 'Priya Sharma', 35, 'San Jose, CA',
- 'The tech enthusiast who expects the best and is willing to pay for it',
- '28-45', '58% M, 42% F', '$130,000-$200,000', 'Single or DINK couple', 'Urban',
- 'Summit', '24 Month Device', '18-30 months', 95.00, 'iPhone 15 Pro Max',
- 'Priya is a senior software engineer at a major tech company in Silicon Valley. She chose Snowmobile specifically for their Summit plan and the data-focused brand messaging that resonated with her. She upgrades her phone annually and expects her carrier to match her tech-forward lifestyle. She signed up for the beta testing program and actively provides feedback on new features. Her phone is her primary computing device outside of work.',
- 'Priya is analytical, quality-focused, and expects premium experiences. She''s an early adopter who reads tech blogs and follows industry news. She values efficiency and innovative features. She''s willing to pay more for better quality but has high expectations in return.',
- 'Mobile connectivity is seamlessly integrated into Priya''s life. She uses her phone for everything - smart home control, mobile payments, health tracking, navigation, communication. She evaluates carriers like she evaluates tech products - features, performance, and innovation matter. She uses the Snowmobile app regularly and appreciates well-designed interfaces.',
- 'Priya views $95/month as reasonable for premium service. Price increases are acceptable if paired with genuine improvements. She''d pay more for exclusive features or early access. Value means getting the latest technology and best performance, not lowest price.',
- 'Priya handles everything digitally and expects instant responses. She''s comfortable with self-service but expects premium support when needed. Her communication is precise and solution-oriented. She provides constructive feedback and expects it to be valued.',
- 'Priya makes decisions based on research and technical evaluation. She reads reviews from trusted tech sources. She''s influenced by what other tech professionals use. Decisions are quick once she''s convinced of the value.',
- 'Being behind other carriers on features, network performance issues, beta features not shipping, feeling like just another customer',
- PARSE_JSON('{"happy": ["Early access to new features", "Best-in-class network performance", "Premium support experience"], "angry": ["Technical issues or downtime", "Falling behind competitors", "Generic customer treatment"], "ignores": ["Price-focused messaging", "Basic plan offers", "Non-tech promotions"]}'),
- PARSE_JSON('{"satisfied": "The Summit plan delivers. Beta features are actually innovative. This is why I chose Snowmobile.", "frustrated": "Why is Verizon getting this feature before us? I pay premium specifically to be first.", "considering_change": "If T-Mobile keeps out-innovating you on 5G, I might have to switch despite everything."}')),
-
--- S6: Rural Reliables
-('S6', 'Rural Reliables', 'Wayne Thompson', 54, 'Billings, MT',
- 'The rural customer whose biggest ask is a signal where he needs it',
- '40-65', '54% M, 46% F', '$50,000-$70,000', 'Married, homeowner', 'Rural',
- 'Powder', 'No Contract', '36-48 months', 48.00, 'Samsung Galaxy A34',
- 'Wayne owns a small cattle ranch outside Billings. He''s been with Snowmobile for 4 years since they expanded coverage in his area - before that, he had to drive 20 minutes to get a reliable signal. His wife Linda is also on the plan. Wayne uses his phone primarily for calls, weather apps, and occasionally looking up equipment information. Coverage on his property and along the rural highways he drives is non-negotiable.',
- 'Wayne is pragmatic, straightforward, and community-oriented. He values companies that invest in rural America. He''s patient with limitations but expects honesty about coverage. He maintains personal relationships with local businesses and expects the same from his carrier.',
- 'Mobile service is a safety and business tool for Wayne. He needs to be reachable for ranch operations and emergencies. He appreciates that he can now get service on most of his property. He uses the store in Billings when he needs help and prefers that to apps. Voice calls matter more than data.',
- 'Wayne considers $48/month fair for rural coverage. He understands rural service costs more to provide. Price increases are acceptable if coverage continues improving. He''d only leave if service degraded or a competitor offered better rural coverage.',
- 'Wayne prefers the local store or phone calls. He values personal relationships with staff who understand rural needs. He''s patient but direct when there are issues. He appreciates when companies remember rural customers exist.',
- 'Wayne makes decisions based on practical needs and local recommendations. His ranching neighbors'' experiences matter. He''s loyal once trust is established. Major decisions are discussed with Linda.',
- 'Coverage gaps, being deprioritized versus urban customers, losing local store, companies that forget rural America',
- PARSE_JSON('{"happy": ["Coverage improvements in rural areas", "Local store with knowledgeable staff", "Reliable service during emergencies"], "angry": ["Coverage gaps on his property", "Being told to use WiFi calling", "City-focused marketing"], "ignores": ["Streaming bundles", "5G speed marketing", "App-only promotions"]}'),
- PARSE_JSON('{"satisfied": "You''re the only carrier that works at my ranch. That means everything.", "frustrated": "Lost signal again at the north pasture. You said the tower upgrade would fix this.", "considering_change": "Heard US Cellular is expanding out here. Might check their coverage if yours doesn''t improve."}')),
-
--- S7: Young Digitals
-('S7', 'Young Digitals', 'Zoe Williams', 23, 'Denver, CO',
- 'The social-first Gen Z customer whose phone is their portal to the world',
- '18-28', '50% F, 50% M', '$35,000-$55,000', 'Single, roommates or parents', 'Urban',
- 'Powder', 'No Contract', '6-18 months', 55.00, 'iPhone 14',
- 'Zoe graduated from CU Boulder last year and works as a social media coordinator for a local brewery. She''s on her own phone plan for the first time after being on her parents'' family plan. She chose Snowmobile because she saw a TikTok about their brand and liked the vibe. She''s already considering whether to switch when her 6-month promotion ends. Her phone is her life - social media, dating apps, music, everything.',
- 'Zoe is social, trend-aware, and values authenticity. She makes decisions quickly based on vibes and peer influence. Brand loyalty is low - she''ll switch for a better deal or cooler brand. She''s highly connected digitally but craves genuine experiences. FOMO is real.',
- 'Zoe''s phone is literally her world - average 8+ hours screen time daily. She uses TikTok, Instagram, Spotify, and various chat apps constantly. Data is more important than voice - she FaceTimes instead of calling. She chose based on social proof and will leave based on social proof. The app better look good.',
- 'Zoe budgets tightly and $55/month feels like a lot. She''s constantly aware of what friends pay and competitor promotions. She''ll switch for $15/month savings without hesitation. Price increases would trigger immediate competitor research.',
- 'Zoe uses chat exclusively and expects instant responses. She''d never call customer service by choice. She might post about bad experiences on social media. Her tone is casual and she uses emojis. She expects brands to communicate like humans.',
- 'Zoe makes decisions fast based on peer recommendations and social proof. TikTok reviews and Reddit threads are trusted sources. Brand aesthetics and values matter. She might switch on a whim if something better comes along.',
- 'Higher prices than friends pay, FOMO on competitor deals, outdated or corporate brand image, slow customer service',
- PARSE_JSON('{"happy": ["Influencer collaborations and promo codes", "Trendy brand image", "Fast chat support"], "angry": ["Paying more than friends", "Missing competitor deals", "Slow or robotic service"], "ignores": ["Traditional advertising", "Voice plan features", "Long-term contract benefits"]}'),
- PARSE_JSON('{"satisfied": "The vibe is right and my friends have it. Plus that TikTok promo was fire.", "frustrated": "Wait my friend pays $20 less? That''s not fair. Why am I paying more?", "considering_change": "Mint Mobile has this hilarious ad and it''s literally half the price. Might switch tbh."}')),
-
--- S8: At-Risk Defectors
-('S8', 'At-Risk Defectors', 'David Kim', 39, 'Atlanta, GA',
- 'The frustrated customer on the edge of leaving who just needs a reason to stay',
- '30-55', '50% M, 50% F', '$60,000-$85,000', 'Various', 'Various',
- 'Powder', 'Month to Month', '24+ months', 45.00, 'Various',
- 'David has been with Snowmobile for 3 years but the relationship has soured over the past 6 months. It started with a billing error that took three calls to resolve. Then there were network issues near his new apartment. His work-from-home setup suffers from spotty coverage. He''s been researching T-Mobile and Verizon and has even visited competitor stores. He hasn''t switched yet but he''s close.',
- 'David is reasonable but feels unheard. His frustration has built over multiple unresolved issues. He''s not inherently disloyal - he stayed for 3 years - but trust is broken. He needs to feel valued and have his problems genuinely solved. He''s willing to give one more chance but skeptical.',
- 'Mobile service has become a source of stress for David rather than convenience. He''s hyperaware of network issues that he might have ignored before. He dreads interacting with customer service. He still uses the phone for work but is emotionally checked out from the Snowmobile brand.',
- 'David''s frustration isn''t primarily about price - it''s about value received. He''d pay more for service that actually works. At this point, a competitor could win him with similar pricing and a fresh start. Retention offers feel hollow without addressing root issues.',
- 'David has tried multiple channels and found all of them lacking. He''s documented his issues and references past ticket numbers. His tone starts controlled but escalates when issues aren''t resolved. He''s told friends about his negative experiences.',
- 'David is in active evaluation mode. He''s comparing options rationally but emotional factors (frustration, distrust) weigh heavily. A genuine save attempt with real problem resolution could work. Generic retention offers will fail.',
- 'Feeling unheard, issues not getting resolved, generic retention scripts, being treated like a statistic',
- PARSE_JSON('{"happy": ["Proactive outreach acknowledging issues", "Real solutions not band-aids", "Genuine apology from leadership"], "angry": ["Scripted retention offers", "Having to re-explain issues", "Empty promises"], "ignores": ["Marketing messages", "Upgrade offers", "Promotional emails"]}'),
- PARSE_JSON('{"satisfied": "If you had fixed this months ago, we wouldn''t be having this conversation.", "frustrated": "I''ve called three times about this. Every time I have to start from scratch. Nobody seems to care.", "considering_change": "I''ve already been to the T-Mobile store. They were actually helpful. What can you do that they can''t?"}'));
+CALL PERSONAS.GENERATE_ALL_PERSONAS();
 
 -- ============================================================================
 -- VERIFICATION
 -- ============================================================================
 
--- Check personas created
+-- Check personas were generated from segments
 SELECT 
-    persona_id,
+    p.persona_id,
+    p.segment_id,
+    p.segment_name,
+    p.typical_arpu,
+    p.created_at,
+    p.generation_model,
+    LEFT(p.background_story, 200) AS background_preview
+FROM PERSONAS.PERSONA_DEFINITIONS p
+ORDER BY p.segment_id;
+
+-- Show segment statistics that personas were generated from
+SELECT 
     segment_id,
     segment_name,
-    persona_name,
-    persona_age,
-    persona_location
-FROM PERSONAS.PERSONA_DEFINITIONS
-ORDER BY segment_id;
+    customer_count,
+    ROUND(pct_of_base, 1) AS pct_of_base,
+    ROUND(avg_arpu, 2) AS avg_arpu,
+    most_common_plan,
+    primary_geography
+FROM ANALYTICS.SEGMENT_STATISTICS
+ORDER BY customer_count DESC;
 
--- Check historical reactions
-SELECT segment_id, COUNT(*) AS reaction_count
+-- Check historical reactions (used for RAG context in generation)
+SELECT 
+    segment_id, 
+    COUNT(*) AS reaction_count,
+    LISTAGG(DISTINCT event_type, ', ') AS event_types
 FROM PERSONAS.HISTORICAL_REACTIONS
 GROUP BY segment_id
 ORDER BY segment_id;
 
-SELECT 'Persona generation complete!' AS status;
+-- Summary
+SELECT 
+    (SELECT COUNT(*) FROM ANALYTICS.SEGMENT_STATISTICS) AS segments_found,
+    (SELECT COUNT(*) FROM PERSONAS.PERSONA_DEFINITIONS) AS personas_generated,
+    (SELECT COUNT(*) FROM PERSONAS.HISTORICAL_REACTIONS) AS historical_reactions,
+    'Personas dynamically generated from segmentation results!' AS status;
 
 
