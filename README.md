@@ -135,8 +135,15 @@ Customer-Digital-Twin/
 ```bash
 cd data_generator
 pip install -r requirements.txt
-python generate_all_data.py --customers 100000
+
+# Generate 1M customers (full dataset - ~35 min)
+python generate_all_data.py --customers 1000000 --seed 42
+
+# Or generate 100K customers (quick test - ~5 min)
+python generate_all_data.py --customers 100000 --seed 42
 ```
+
+This generates ~17.8M records across 8 CSV files (~3.4 GB total).
 
 ### Step 2: Set Up Snowflake
 
@@ -150,10 +157,18 @@ python generate_all_data.py --customers 100000
 
 ### Step 3: Upload Data to Stage
 
-```sql
--- Using SnowSQL
-PUT file://./data/internal/customers.csv @RAW.DATA_STAGE/internal/customers/;
--- Repeat for other files...
+```bash
+# Using SnowSQL - Internal data
+snowsql -q "PUT file://./data/internal/customers.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/internal/monthly_usage.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/internal/support_interactions.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/internal/campaign_responses.csv @RAW.DATA_STAGE/internal/ AUTO_COMPRESS=TRUE"
+
+# Using SnowSQL - External data
+snowsql -q "PUT file://./data/external/zip_demographics.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/external/economic_indicators.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/external/competitive_landscape.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
+snowsql -q "PUT file://./data/external/lifestyle_segments.csv @RAW.DATA_STAGE/external/ AUTO_COMPRESS=TRUE"
 ```
 
 ### Step 4: Load Data
@@ -214,17 +229,60 @@ CALL AGENTS.SIMULATE_SCENARIO(
 
 ## 📊 Data Architecture
 
+### Generated Data Files
+
+Run the data generator to create synthetic datasets:
+
+```bash
+cd data_generator
+pip install -r requirements.txt
+python generate_all_data.py --customers 1000000 --seed 42
+```
+
 ### Internal Data (1st Party)
-- **Customers**: 1M records with demographics, plans, devices
-- **Monthly Usage**: 12M records (usage, billing, payments)
-- **Support Interactions**: 2M records (tickets, sentiment)
-- **Campaign Responses**: 5M records (marketing history)
+
+| File | Records | Size | Description |
+|------|---------|------|-------------|
+| `data/internal/customers.csv` | 1,000,000 | 256 MB | Customer master data: demographics, plans, devices, financial, engagement |
+| `data/internal/monthly_usage.csv` | 9,288,388 | 1.4 GB | 12 months of usage: data GB, voice minutes, SMS, billing |
+| `data/internal/support_interactions.csv` | 2,111,579 | 613 MB | Support tickets: channel, category, sentiment, resolution |
+| `data/internal/campaign_responses.csv` | 5,286,390 | 1.1 GB | Marketing campaigns: offers, responses, conversions |
 
 ### External Data (3rd Party)
-- **ZIP Demographics**: 42K records (census data)
-- **Economic Indicators**: 42K records (cost of living, employment)
-- **Competitive Landscape**: 210 DMAs (market share, pricing)
-- **Lifestyle Segments**: 42K records (psychographics)
+
+| File | Records | Size | Description |
+|------|---------|------|-------------|
+| `data/external/zip_demographics.csv` | 42,000 | 11 MB | Census data: income, age, education, housing by ZIP |
+| `data/external/economic_indicators.csv` | 42,000 | 5 MB | Economic health: cost of living, unemployment, credit |
+| `data/external/competitive_landscape.csv` | 210 | 37 KB | Market share by DMA: Verizon, AT&T, T-Mobile, regional |
+| `data/external/lifestyle_segments.csv` | 42,000 | 8.3 MB | Psychographics: tech adoption, price sensitivity, lifestyle |
+
+### Data Summary
+
+| Metric | Value |
+|--------|-------|
+| **Total Records** | ~17.8 million |
+| **Total Size** | ~3.4 GB |
+| **Generation Time** | ~35 minutes |
+| **Seed** | 42 (reproducible) |
+
+### Customer Data Fields
+
+The `customers.csv` includes 40+ fields:
+
+| Category | Fields |
+|----------|--------|
+| **Identity** | `customer_id`, `account_id` |
+| **Location** | `zip_code`, `state_code`, `dma_code` |
+| **Demographics** | `age`, `gender` |
+| **Account** | `customer_since`, `tenure_months`, `acquisition_channel` |
+| **Plan** | `plan_name`, `plan_category`, `plan_price`, `lines_on_account`, `contract_type` |
+| **Device** | `device_brand`, `device_model`, `device_tier`, `device_os`, `is_5g_capable` |
+| **Financial** | `monthly_arpu`, `lifetime_value`, `payment_method`, `autopay_enrolled`, `credit_class` |
+| **Add-ons** | `has_device_protection`, `has_intl_roaming`, `has_streaming_bundle` |
+| **Loyalty** | `rewards_member`, `rewards_tier`, `rewards_points_balance` |
+| **Engagement** | `app_user`, `app_engagement_score`, `nps_score` |
+| **Risk** | `churn_risk_score`, `predicted_churn_reason`, `complaint_count_12m` |
 
 ---
 
